@@ -1,5 +1,6 @@
 #include <iostream>
 #include "BigInt.h"
+using namespace std;
 
 // A: Triển khai hàm lũy thừa mô-đun
 // Hàm thực hiện: (base^exponent) % mod
@@ -62,8 +63,8 @@ int main()
     BigInt bob_shared_secret = modular_exponentiation(A, b, p);   // Bob tính s = A^b % p
 
     // 5. Hiển thị kết quả và xác minh rằng bí mật chung trùng khớp
-    std::cout << "Bí mật chung Alice nhận được: " << alice_shared_secret.to_string() << "\n";
-    std::cout << "Bí mật chung Bob nhận được: " << bob_shared_secret.to_string() << "\n";
+    std::cout << "Bí mật chung Alice nhận được: " << alice_shared_secret << "\n";
+    std::cout << "Bí mật chung Bob nhận được: " << bob_shared_secret << "\n";
     std::cout << "Quá trình tính toán đúng không? " << (alice_shared_secret == bob_shared_secret) << "\n";
 
     return 0;
