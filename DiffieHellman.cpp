@@ -26,8 +26,8 @@ BigInt generate_safe_prime(int bit_size)
     // 1. Cài đặt logic để sinh một số nguyên tố an toàn
     // 2. Viết hàm kiểm tra nguyên tố (ví dụ: Miller-Rabin)
 
-    // TODO: Cài đặt sinh số nguyên tố an toàn thực tế
-    return BigInt::random(bit_size);
+    BigInt prime = 0;
+    return prime;
 }
 
 // C: Triển khai hàm sinh khóa riêng ngẫu nhiên
@@ -35,18 +35,17 @@ BigInt generate_private_key(const BigInt& p)
 {
     // Sử dụng sinh số ngẫu nhiên để tạo khóa riêng
     // Khóa riêng nên nằm trong khoảng [2, p-2]
-    // TODO: Sinh số ngẫu nhiên trong khoảng [2, p-2]
-    return BigInt::random(p.to_string().size() * 4); // Giả lập, cần chỉnh lại cho đúng khoảng
+    BigInt private_key = 0;
+    return private_key;
 }
 
 // D: Hoàn thành logic trao đổi khóa Diffie-Hellman
-// #include "BigInt.h" // Sẽ tạo class này ở bước tiếp theo
 
 int main()
 {
-
     // 1. Sinh số nguyên tố lớn p và phần tử sinh g
     int bit_size = 512; // Kích thước bit ví dụ, có thể điều chỉnh
+    BigInt::BIT_SIZE = bit_size;
     BigInt p = generate_safe_prime(bit_size); // Sinh một số nguyên tố
     BigInt g = BigInt(2); // Phần tử sinh, sinh viên cần tìm hiểu và chọn giá trị khác
 
