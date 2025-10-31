@@ -5,7 +5,8 @@
 #include <string>
 #include <iostream>
 
-class BigInt {
+class BigInt
+{
 public:
     // Số bit tối đa
     static int BIT_SIZE;
@@ -13,21 +14,21 @@ public:
 
     BigInt();
     BigInt(uint64_t val);
-    BigInt(const std::string& str);
-    BigInt(const BigInt& other);
+    BigInt(const std::string &str);
+    BigInt(const BigInt &other);
 
     // Các phép toán cơ bản
-    BigInt operator%(const BigInt& mod) const;
-    BigInt operator*(const BigInt& other) const;
-    BigInt operator+(const BigInt& other) const;
-    BigInt operator-(const BigInt& other) const;
-    BigInt operator/(const BigInt& other) const;
-    BigInt& operator=(const BigInt& other);
-    bool operator==(const BigInt& other) const;
-    bool operator>(const BigInt& other) const;
-    bool operator<(const BigInt& other) const;
+    BigInt operator%(const BigInt &mod) const;
+    BigInt operator*(const BigInt &other) const;
+    BigInt operator+(const BigInt &other) const;
+    BigInt operator-(const BigInt &other) const;
+    BigInt operator/(const BigInt &other) const;
+    BigInt &operator=(const BigInt &other);
+    bool operator==(const BigInt &other) const;
+    bool operator>(const BigInt &other) const;
+    bool operator<(const BigInt &other) const;
 
     // Hàm nhập xuất
-    friend std::istream& operator>>(std::istream& in, BigInt& val);
-    friend std::ostream& operator<<(std::ostream& out, const BigInt& val);
+    friend std::istream &operator>>(std::istream &in, BigInt &val);
+    friend std::ostream &operator<<(std::ostream &out, const BigInt &val);
 };

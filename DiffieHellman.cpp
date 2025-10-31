@@ -4,15 +4,17 @@ using namespace std;
 
 // A: Triển khai hàm lũy thừa mô-đun
 // Hàm thực hiện: (base^exponent) % mod
-BigInt modular_exponentiation(const BigInt& base, const BigInt& exponent, const BigInt& mod)
+BigInt modular_exponentiation(const BigInt &base, const BigInt &exponent, const BigInt &mod)
 {
     BigInt result = 1;
     BigInt base_mod = base % mod;
 
     // Ví dụ về logic lũy thừa mô-đun
     BigInt exp = exponent;
-    while (exp > 0) {
-        if (exp % BigInt(2) == BigInt(1)) {
+    while (exp > 0)
+    {
+        if (exp % BigInt(2) == BigInt(1))
+        {
             result = (result * base_mod) % mod;
         }
         base_mod = (base_mod * base_mod) % mod;
@@ -32,7 +34,7 @@ BigInt generate_safe_prime(int bit_size)
 }
 
 // C: Triển khai hàm sinh khóa riêng ngẫu nhiên
-BigInt generate_private_key(const BigInt& p)
+BigInt generate_private_key(const BigInt &p)
 {
     // Sử dụng sinh số ngẫu nhiên để tạo khóa riêng
     // Khóa riêng nên nằm trong khoảng [2, p-2]
@@ -48,7 +50,7 @@ int main()
     int bit_size = 512; // Kích thước bit ví dụ, có thể điều chỉnh
     BigInt::BIT_SIZE = bit_size;
     BigInt p = generate_safe_prime(bit_size); // Sinh một số nguyên tố
-    BigInt g = BigInt(2); // Phần tử sinh, sinh viên cần tìm hiểu và chọn giá trị khác
+    BigInt g = BigInt(2);                     // Phần tử sinh, sinh viên cần tìm hiểu và chọn giá trị khác
 
     // 2. Sinh khóa riêng của Alice và Bob
     BigInt a = generate_private_key(p); // Khóa riêng của Alice
