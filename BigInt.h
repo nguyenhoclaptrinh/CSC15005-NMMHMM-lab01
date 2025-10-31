@@ -27,7 +27,7 @@ public:
     bool operator>(const BigInt& other) const;
     bool operator<(const BigInt& other) const;
 
-    // Các hàm tiện ích
-    std::string to_string() const;
-    static BigInt random(int bit_size);
+    // Hàm nhập xuất
+    friend std::istream& operator>>(std::istream& in, BigInt& val);
+    friend std::ostream& operator<<(std::ostream& out, const BigInt& val);
 };
