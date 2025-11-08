@@ -23,14 +23,72 @@ BigInt modular_exponentiation(const BigInt &base, const BigInt &exponent, const 
     return result;
 }
 
+bool millerRabinTest(const BigInt& n, const BigInt& a) {
+    if (n == BigInt(2) || n == BigInt(3)) return true;
+    if (n.is_even()) return false;
+    
+    BigInt d = n - BigInt(1);
+    BigInt s(0);
+    while (d.is_even()) {
+        d = d/BigInt(2);
+        s = s + BigInt(1);
+    }
+    BigInt x = modular_exponentiation(a, d, n);
+    if (x == BigInt(1) || x == n - BigInt(1)) {
+         return true;
+    }
+   BigInt s_minus_1 = s - BigInt(1);
+   for (BigInt r = BigInt(1); r <= s_minus_1; r = r + BigInt(1)) {
+        x = (x * x) % n;
+        if (x == n - BigInt(1)) return true;
+        if (x == BigInt(1)) return false;
+    }
+    return false;
+}
+bool isPrime(const BigInt& n) {
+    if (n < BigInt(2)) return false;
+    if (n == BigInt(2) || n == BigInt(3)) return true;
+    if (n.is_even() || n % BigInt(3) == 0) return false;
+    BigInt primes[] = {
+        BigInt(2), BigInt(3), BigInt(5)
+    };
+    
+    for (const BigInt& a : primes) {
+        if (a >= n) continue;  
+        if (!millerRabinTest(n, a)) {
+            return false;
+        }
+    }
+    return true;
+}
+BigInt get_min_value_with_bit_size(int bit_size) {
+    BigInt result(0);
+    if (bit_size <= 0) return result;
+    
+    int word_index = (bit_size - 1) / 32;
+    int bit_index = (bit_size - 1) % 32;
+    
+    if (word_index < result.data.size()) {
+        result.data[word_index] = 1U << bit_index;
+    }
+    return result;
+}
 // B: Triển khai hàm sinh số nguyên tố ngẫu nhiên
 BigInt generate_safe_prime(int bit_size)
 {
     // 1. Cài đặt logic để sinh một số nguyên tố an toàn
     // 2. Viết hàm kiểm tra nguyên tố (ví dụ: Miller-Rabin)
-
-    BigInt prime = 0;
-    return prime;
+    BigInt p = get_min_value_with_bit_size(bit_size);
+    if (p.is_even()) p = p + BigInt(1);
+    while(true) {
+        if(isPrime(p)){
+             BigInt q = (p - BigInt(1))/ BigInt(2);
+             if(isPrime(q)) 
+                break;
+        }
+        p = p + BigInt(2);
+    }
+    return p;
 }
 
 // C: Triển khai hàm sinh khóa riêng ngẫu nhiên
