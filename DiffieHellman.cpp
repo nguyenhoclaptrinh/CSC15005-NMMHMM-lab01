@@ -6,12 +6,11 @@ using namespace std;
 // Hàm thực hiện: (base^exponent) % mod
 BigInt modular_exponentiation(const BigInt &base, const BigInt &exponent, const BigInt &mod)
 {
-    BigInt result = 1;
+    BigInt result(1);
     BigInt base_mod = base % mod;
 
-    // Ví dụ về logic lũy thừa mô-đun
     BigInt exp = exponent;
-    while (exp > 0)
+    while (!(exp == BigInt(0)))
     {
         if (exp % BigInt(2) == BigInt(1))
         {
@@ -48,7 +47,7 @@ bool millerRabinTest(const BigInt& n, const BigInt& a) {
 bool isPrime(const BigInt& n) {
     if (n < BigInt(2)) return false;
     if (n == BigInt(2) || n == BigInt(3)) return true;
-    if (n.is_even() || n % BigInt(3) == 0) return false;
+    if (n.is_even() || n % BigInt(3) == BigInt(0)) return false;
     BigInt primes[] = {
         BigInt(2), BigInt(3), BigInt(5)
     };
@@ -96,12 +95,13 @@ BigInt generate_private_key(const BigInt &p)
 {
     // Sử dụng sinh số ngẫu nhiên để tạo khóa riêng
     // Khóa riêng nên nằm trong khoảng [2, p-2]
-    BigInt private_key = 0;
+    BigInt private_key(0);
     return private_key;
 }
 
 // D: Hoàn thành logic trao đổi khóa Diffie-Hellman
 
+#ifndef UNIT_TEST
 int main()
 {
     // 1. Sinh số nguyên tố lớn p và phần tử sinh g
@@ -129,3 +129,4 @@ int main()
 
     return 0;
 }
+#endif
