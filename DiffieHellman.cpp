@@ -67,8 +67,22 @@ bool isPrime(const BigInt &n)
         return true;
     if (is_even(n) || n % BigInt(3) == BigInt(0))
         return false;
-    BigInt primes[] = {
-        BigInt(2), BigInt(3), BigInt(5)};
+    // Expanded list of small prime bases for Miller-Rabin (many bases to increase confidence for large sizes)
+    std::vector<BigInt> primes = {
+        BigInt(2), BigInt(3), BigInt(5), BigInt(7), BigInt(11), BigInt(13), BigInt(17), BigInt(19),
+        BigInt(23), BigInt(29), BigInt(31), BigInt(37), BigInt(41), BigInt(43), BigInt(47), BigInt(53),
+        BigInt(59), BigInt(61), BigInt(67), BigInt(71), BigInt(73), BigInt(79), BigInt(83), BigInt(89),
+        BigInt(97), BigInt(101), BigInt(103), BigInt(107), BigInt(109), BigInt(113), BigInt(127), BigInt(131),
+        BigInt(137), BigInt(139), BigInt(149), BigInt(151), BigInt(157), BigInt(163), BigInt(167), BigInt(173),
+        BigInt(179), BigInt(181), BigInt(191), BigInt(193), BigInt(197), BigInt(199), BigInt(211), BigInt(223),
+        BigInt(227), BigInt(229), BigInt(233), BigInt(239), BigInt(241), BigInt(251), BigInt(257), BigInt(263),
+        BigInt(269), BigInt(271), BigInt(277), BigInt(281), BigInt(283), BigInt(293), BigInt(307), BigInt(311),
+        BigInt(313), BigInt(317), BigInt(331), BigInt(337), BigInt(347), BigInt(349), BigInt(353), BigInt(359),
+        BigInt(367), BigInt(373), BigInt(379), BigInt(383), BigInt(389), BigInt(397), BigInt(401), BigInt(409),
+        BigInt(419), BigInt(421), BigInt(431), BigInt(433), BigInt(439), BigInt(443), BigInt(449), BigInt(457),
+        BigInt(461), BigInt(463), BigInt(467), BigInt(479), BigInt(487), BigInt(491), BigInt(499), BigInt(503),
+        BigInt(509), BigInt(521), BigInt(523), BigInt(541)
+    };
 
     for (const BigInt &a : primes)
     {
@@ -83,17 +97,19 @@ bool isPrime(const BigInt &n)
 }
 BigInt get_min_value_with_bit_size(int bit_size)
 {
-    BigInt result(0);
     if (bit_size <= 0)
-        return result;
-
-    size_t word_index = size_t((bit_size - 1) / 32);
-    int bit_index = (bit_size - 1) % 32;
-
-    if (word_index < result.data.size())
-    {
-        result.data[word_index] = 1U << bit_index;
-    }
+        return BigInt(0);
+    // clamp requested bit_size to allowed maximum
+    if (bit_size > BigInt::BIT_SIZE)
+        bit_size = BigInt::BIT_SIZE;
+    size_t words = (bit_size + 31) / 32;
+    BigInt result(0);
+    result.data.assign(words, 0u);
+    size_t wi = size_t((bit_size - 1) / 32);
+    int bi = (bit_size - 1) % 32;
+    result.data[wi] = (1u << bi);
+    result.normalize();
+    printf("Min value with bit size %d: %s\n", bit_size, result.to_decimal().c_str());
     return result;
 }
 // B: Triển khai hàm sinh số nguyên tố ngẫu nhiên
@@ -106,6 +122,7 @@ BigInt generate_safe_prime(int bit_size)
         p = p + BigInt(1);
     while (true)
     {
+        printf("Testing p = %s\n", p.to_decimal().c_str());
         if (isPrime(p))
         {
             BigInt q = (p - BigInt(1)) / BigInt(2);
@@ -147,8 +164,9 @@ BigInt generate_private_key(const BigInt &p)
 int main()
 {
     // 1. Sinh số nguyên tố lớn p và phần tử sinh g
-    int bit_size = 512; // Kích thước bit ví dụ, có thể điều chỉnh
+    int bit_size = 32; // Kích thước bit ví dụ, có thể điều chỉnh
     BigInt::BIT_SIZE = bit_size;
+
     BigInt p = generate_safe_prime(bit_size); // Sinh một số nguyên tố
     BigInt g = BigInt(2);                     // Phần tử sinh, sinh viên cần tìm hiểu và chọn giá trị khác
 
