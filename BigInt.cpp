@@ -54,18 +54,11 @@ BigInt::BigInt(const std::string &decimal)
                 break;
         }
     }
-    normalize();
+    // normalize() removed — trimming is intentionally omitted per refactor
 }
 
 // ===== Utility =====
-BigInt &BigInt::normalize()
-{
-    // cắt các word cao bằng 0 giữ ít nhất 1 word
-    while (data.size() > 1 && data.back() == 0)
-        data.pop_back();
-    // mở rộng nếu cần (giữ nguyên thiết kế fixed-size: ở đây ta cho phép co lại)
-    return *this;
-}
+// normalize() intentionally removed — callers should not rely on it.
 
 bool BigInt::operator==(const BigInt &other) const
 {
@@ -109,8 +102,10 @@ BigInt BigInt::operator+(const BigInt &other) const
         carry = s >> 32;
     }
     if (carry)
+    {
         r.data.push_back(uint32_t(carry));
-    return r.normalize();
+    }
+    return r;
 }
 
 BigInt BigInt::operator-(const BigInt &other) const
@@ -133,27 +128,39 @@ BigInt BigInt::operator-(const BigInt &other) const
             borrow = 0;
         r.data[i] = uint32_t(d & MASK);
     }
-    return r.normalize();
+    return r;
 }
 
 BigInt BigInt::operator*(const BigInt &other) const
 {
     size_t na = data.size(), nb = other.data.size();
     BigInt r;
+    // ensure capacity
     r.data.assign(na + nb, 0);
     for (size_t i = 0; i < na; ++i)
     {
         uint64_t carry = 0;
         for (size_t j = 0; j < nb; ++j)
         {
-            uint64_t cur = uint64_t(data[i]) * uint64_t(other.data[j]) + uint64_t(r.data[i + j]) + carry;
-            r.data[i + j] = uint32_t(cur & MASK);
-            carry = cur >> 32;
+            // accumulate product + existing + carry
+            uint64_t cur = uint64_t(data[i]) * uint64_t(other.data[j]);
+            uint64_t sum = uint64_t(r.data[i + j]) + cur + carry;
+            r.data[i + j] = uint32_t(sum & MASK);
+            carry = sum >> 32;
         }
-        if (carry)
-            r.data[i + nb] += uint32_t(carry);
+        // propagate carry into higher words; this may cascade
+        size_t k = i + nb;
+        while (carry)
+        {
+            if (k >= r.data.size())
+                r.data.push_back(0);
+            uint64_t sum = uint64_t(r.data[k]) + carry;
+            r.data[k] = uint32_t(sum & MASK);
+            carry = sum >> 32;
+            ++k;
+        }
     }
-    return r.normalize();
+    return r;
 }
 
 // Bit helpers
@@ -230,7 +237,7 @@ BigInt BigInt::operator/(const BigInt &other) const
             set_bit(q, b);
         }
     }
-    return q.normalize();
+    return q;
 }
 
 BigInt BigInt::operator%(const BigInt &mod) const
@@ -256,42 +263,10 @@ BigInt BigInt::operator%(const BigInt &mod) const
         if (!(r < mod))
             r = r - mod;
     }
-    return r.normalize();
+    return r;
 }
 
-// ===== Decimal conversion =====
-std::string BigInt::to_decimal() const
-{
-    // Chia liên tiếp cho 10, thu thập remainder (slow nhưng đơn giản)
-    if (data.size() == 1 && data[0] == 0)
-        return "0";
-    BigInt tmp = *this;
-    std::string out;
-    BigInt ten(10);
-    while (!(tmp.data.size() == 1 && tmp.data[0] == 0))
-    {
-        // divmod tmp / 10
-        BigInt q(0), r(0);
-        int nbit = msb_index(tmp);
-        for (int b = nbit; b >= 0; --b)
-        {
-            shl1(r);
-            if (get_bit(tmp, b))
-                r.data[0] |= 1u;
-            if (!(r < ten))
-            {
-                r = r - ten;
-                set_bit(q, b);
-            }
-        }
-        // remainder r là digit
-        uint32_t digit = (r.data.empty() ? 0u : r.data[0]);
-        out.push_back(char('0' + digit));
-        tmp = q.normalize();
-    }
-    reverse(out.begin(), out.end());
-    return out;
-}
+// Decimal conversion removed (to_decimal was moved out of BigInt per request).
 
 // ===== I/O =====
 std::istream &operator>>(std::istream &in, BigInt &val)
@@ -306,7 +281,6 @@ std::ostream &operator<<(std::ostream &out, const BigInt &val)
 {
     // Xuất hex đơn giản
     BigInt v = val;
-    v.normalize();
     std::ostringstream oss;
     for (int i = int(v.data.size()) - 1; i >= 0; --i)
     {

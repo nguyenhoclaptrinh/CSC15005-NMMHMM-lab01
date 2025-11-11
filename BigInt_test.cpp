@@ -7,17 +7,22 @@
 
 using namespace std;
 
-static void expect_eq(const BigInt &v, const string &dec, const char *msg) {
-    string got = v.to_decimal();
-    if (got != dec) {
-        cerr << "FAIL: " << msg << " -- got: '" << got << "', expected: '" << dec << "'\n";
+static void expect_eq(const BigInt &v, const string &dec, const char *msg)
+{
+    BigInt expected(dec);
+    if (!(v == expected))
+    {
+        cerr << "FAIL: " << msg << " -- not equal to expected decimal: '" << dec << "'\n";
         exit(1);
-    } else {
+    }
+    else
+    {
         cout << "ok: " << msg << " -> " << dec << "\n";
     }
 }
 
-int main() {
+int main()
+{
     cout << "Running BigInt tests...\n";
 
     // 1) Zero and decimal parsing
@@ -64,8 +69,26 @@ int main() {
 
     // 7) to_decimal for a larger value
     BigInt bigN(string("340282366920938463463374607431768211455")); // 2^128-1
-    string dec = bigN.to_decimal();
-    expect_eq(bigN, dec, "to_decimal for 2^128-1");
+    expect_eq(bigN, string("340282366920938463463374607431768211455"), "to_decimal for 2^128-1");
+
+    // 8) multiplication carry across multiple words
+    BigInt max32b(string("4294967295")); // 2^32 -1
+    BigInt sq = max32b * max32b; // (2^32-1)^2 = 18446744065119617025
+    expect_eq(sq, string("18446744065119617025"), "(2^32-1)^2 carry propagation");
+
+    BigInt two32b(string("4294967296")); // 2^32
+    BigInt sq2 = two32b * two32b; // 2^64 = 18446744073709551616
+    expect_eq(sq2, string("18446744073709551616"), "(2^32)^2 = 2^64");
+
+    // 9) parsing with non-digit characters (constructor ignores non-digits)
+    BigInt parsed(string("  00123abc"));
+    expect_eq(parsed, string("123"), "parse ignores non-digit prefixes/suffixes");
+
+    // 10) division/modulo edge cases
+    BigInt x(string("123456789"));
+    expect_eq(x / x, string("1"), "x / x == 1");
+    expect_eq(x % x, string("0"), "x % x == 0");
+    expect_eq(x / BigInt(1), string("123456789"), "x / 1 == x");
 
     cout << "All tests passed.\n";
     return 0;
