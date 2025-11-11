@@ -36,6 +36,10 @@ public:
     BigInt operator/(const BigInt &other) const; // chia lấy phần nguyên
     BigInt operator%(const BigInt &mod) const;   // phần dư
 
+    // Utility
+    BigInt &normalize();
+    std::string to_decimal() const;
+
     // I/O
     friend istream &operator>>(istream &in, BigInt &val);
     friend ostream &operator<<(ostream &out, const BigInt &val);
