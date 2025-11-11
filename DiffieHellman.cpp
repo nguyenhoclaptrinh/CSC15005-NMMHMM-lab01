@@ -19,7 +19,7 @@ BigInt modular_exponentiation(const BigInt &base, const BigInt &exponent, const 
     BigInt exp = exponent;
     while (!(exp == BigInt(0)))
     {
-        if (exp % BigInt(2) == BigInt(1))
+        if (!is_even(exp))
         {
             result = (result * base_mod) % mod;
         }
@@ -31,11 +31,7 @@ BigInt modular_exponentiation(const BigInt &base, const BigInt &exponent, const 
 
 bool millerRabinTest(const BigInt &n, const BigInt &a)
 {
-    if (n == BigInt(2) || n == BigInt(3))
-        return true;
-    if (is_even(n))
-        return false;
-
+    if (a >= BigInt(n - BigInt(1))) return true;
     BigInt d = n - BigInt(1);
     BigInt s(0);
     while (is_even(d))
@@ -48,8 +44,7 @@ bool millerRabinTest(const BigInt &n, const BigInt &a)
     {
         return true;
     }
-    BigInt s_minus_1 = s - BigInt(1);
-    for (BigInt r = BigInt(1); r <= s_minus_1; r = r + BigInt(1))
+    for (BigInt r = BigInt(1); r < s; r = r + BigInt(1))
     {
         x = (x * x) % n;
         if (x == n - BigInt(1))
@@ -61,7 +56,7 @@ bool millerRabinTest(const BigInt &n, const BigInt &a)
 }
 bool isPrime(const BigInt &n)
 {
-    if (n < BigInt(2))
+     if (n < BigInt(2))
         return false;
     if (n == BigInt(2) || n == BigInt(3))
         return true;
@@ -70,24 +65,22 @@ bool isPrime(const BigInt &n)
     // Expanded list of small prime bases for Miller-Rabin (many bases to increase confidence for large sizes)
     std::vector<BigInt> primes = {
         BigInt(2), BigInt(3), BigInt(5), BigInt(7), BigInt(11), BigInt(13), BigInt(17), BigInt(19),
-        BigInt(23), BigInt(29), BigInt(31), BigInt(37), BigInt(41), BigInt(43), BigInt(47), BigInt(53),
-        BigInt(59), BigInt(61), BigInt(67), BigInt(71), BigInt(73), BigInt(79), BigInt(83), BigInt(89),
-        BigInt(97), BigInt(101), BigInt(103), BigInt(107), BigInt(109), BigInt(113), BigInt(127), BigInt(131),
-        BigInt(137), BigInt(139), BigInt(149), BigInt(151), BigInt(157), BigInt(163), BigInt(167), BigInt(173),
-        BigInt(179), BigInt(181), BigInt(191), BigInt(193), BigInt(197), BigInt(199), BigInt(211), BigInt(223),
-        BigInt(227), BigInt(229), BigInt(233), BigInt(239), BigInt(241), BigInt(251), BigInt(257), BigInt(263),
-        BigInt(269), BigInt(271), BigInt(277), BigInt(281), BigInt(283), BigInt(293), BigInt(307), BigInt(311),
-        BigInt(313), BigInt(317), BigInt(331), BigInt(337), BigInt(347), BigInt(349), BigInt(353), BigInt(359),
-        BigInt(367), BigInt(373), BigInt(379), BigInt(383), BigInt(389), BigInt(397), BigInt(401), BigInt(409),
-        BigInt(419), BigInt(421), BigInt(431), BigInt(433), BigInt(439), BigInt(443), BigInt(449), BigInt(457),
-        BigInt(461), BigInt(463), BigInt(467), BigInt(479), BigInt(487), BigInt(491), BigInt(499), BigInt(503),
-        BigInt(509), BigInt(521), BigInt(523), BigInt(541)
+        BigInt(23), BigInt(29), BigInt(31), BigInt(37), BigInt(41), BigInt(43), BigInt(47), BigInt(53)
+        // BigInt(59), BigInt(61), BigInt(67), BigInt(71), BigInt(73), BigInt(79), BigInt(83), BigInt(89),
+        // BigInt(97), BigInt(101), BigInt(103), BigInt(107), BigInt(109), BigInt(113), BigInt(127), BigInt(131),
+        // BigInt(137), BigInt(139), BigInt(149), BigInt(151), BigInt(157), BigInt(163), BigInt(167), BigInt(173),
+        // BigInt(179), BigInt(181), BigInt(191), BigInt(193), BigInt(197), BigInt(199), BigInt(211), BigInt(223),
+        // BigInt(227), BigInt(229), BigInt(233), BigInt(239), BigInt(241), BigInt(251), BigInt(257), BigInt(263),
+        // BigInt(269), BigInt(271), BigInt(277), BigInt(281), BigInt(283), BigInt(293), BigInt(307), BigInt(311),
+        // BigInt(313), BigInt(317), BigInt(331), BigInt(337), BigInt(347), BigInt(349), BigInt(353), BigInt(359),
+        // BigInt(367), BigInt(373), BigInt(379), BigInt(383), BigInt(389), BigInt(397), BigInt(401), BigInt(409),
+        // BigInt(419), BigInt(421), BigInt(431), BigInt(433), BigInt(439), BigInt(443), BigInt(449), BigInt(457),
+        // BigInt(461), BigInt(463), BigInt(467), BigInt(479), BigInt(487), BigInt(491), BigInt(499), BigInt(503),
+        // BigInt(509), BigInt(521), BigInt(523), BigInt(541)
     };
 
     for (const BigInt &a : primes)
     {
-        if (a >= n)
-            continue;
         if (!millerRabinTest(n, a))
         {
             return false;
@@ -122,7 +115,6 @@ BigInt generate_safe_prime(int bit_size)
         p = p + BigInt(1);
     while (true)
     {
-        printf("Testing p = %s\n", p.to_decimal().c_str());
         if (isPrime(p))
         {
             BigInt q = (p - BigInt(1)) / BigInt(2);
@@ -165,8 +157,6 @@ int main()
 {
     // 1. Sinh số nguyên tố lớn p và phần tử sinh g
     int bit_size = 32; // Kích thước bit ví dụ, có thể điều chỉnh
-    BigInt::BIT_SIZE = bit_size;
-
     BigInt p = generate_safe_prime(bit_size); // Sinh một số nguyên tố
     BigInt g = BigInt(2);                     // Phần tử sinh, sinh viên cần tìm hiểu và chọn giá trị khác
 
