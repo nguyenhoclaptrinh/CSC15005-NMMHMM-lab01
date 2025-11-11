@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include "BigInt.h"
 using namespace std;
 
@@ -93,9 +94,23 @@ BigInt generate_safe_prime(int bit_size)
 // C: Triển khai hàm sinh khóa riêng ngẫu nhiên
 BigInt generate_private_key(const BigInt &p)
 {
-    // Sử dụng sinh số ngẫu nhiên để tạo khóa riêng
-    // Khóa riêng nên nằm trong khoảng [2, p-2]
+    // Khởi tạo bộ sinh số ngẫu nhiên
+    random_device rd;
+    mt19937_64 gen(rd());
+    uniform_int_distribution<uint64_t> dis;
+    
     BigInt private_key(0);
+    
+    // Sinh số ngẫu nhiên cho mỗi phần tử 32-bit trong vector data
+    for (size_t i = 0; i < private_key.data.size(); ++i) {
+        private_key.data[i] = dis(gen);
+    }
+    
+    // Đảm bảo private_key nằm trong khoảng [2, p-2]
+    BigInt p_minus_2 = p - BigInt(2);
+    private_key = private_key % p_minus_2;
+    private_key = private_key + BigInt(2);
+    
     return private_key;
 }
 
@@ -123,9 +138,9 @@ int main()
     BigInt bob_shared_secret = modular_exponentiation(A, b, p);   // Bob tính s = A^b % p
 
     // 5. Hiển thị kết quả và xác minh rằng bí mật chung trùng khớp
-    std::cout << "Bí mật chung Alice nhận được: " << alice_shared_secret << "\n";
-    std::cout << "Bí mật chung Bob nhận được: " << bob_shared_secret << "\n";
-    std::cout << "Quá trình tính toán đúng không? " << (alice_shared_secret == bob_shared_secret) << "\n";
+    std::cout << "Bi mat chung Alice nhan duoc: " << alice_shared_secret << "\n";
+    std::cout << "Bi mat chung Bob nhan duoc: " << bob_shared_secret << "\n";
+    std::cout << "Qua trinh tinh toan dung khong? " << (alice_shared_secret == bob_shared_secret) << "\n";
 
     return 0;
 }
