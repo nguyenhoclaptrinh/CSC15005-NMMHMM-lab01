@@ -3,6 +3,12 @@
 #include "BigInt.h"
 using namespace std;
 
+// parity helper (was previously a method on BigInt; moved here per request)
+static inline bool is_even(const BigInt &n)
+{
+    return (n.data.empty() ? true : ((n.data[0] & 1u) == 0));
+}
+
 // A: Triển khai hàm lũy thừa mô-đun
 // Hàm thực hiện: (base^exponent) % mod
 BigInt modular_exponentiation(const BigInt &base, const BigInt &exponent, const BigInt &mod)
@@ -23,52 +29,69 @@ BigInt modular_exponentiation(const BigInt &base, const BigInt &exponent, const 
     return result;
 }
 
-bool millerRabinTest(const BigInt& n, const BigInt& a) {
-    if (n == BigInt(2) || n == BigInt(3)) return true;
-    if (n.is_even()) return false;
-    
+bool millerRabinTest(const BigInt &n, const BigInt &a)
+{
+    if (n == BigInt(2) || n == BigInt(3))
+        return true;
+    if (is_even(n))
+        return false;
+
     BigInt d = n - BigInt(1);
     BigInt s(0);
-    while (d.is_even()) {
-        d = d/BigInt(2);
+    while (is_even(d))
+    {
+        d = d / BigInt(2);
         s = s + BigInt(1);
     }
     BigInt x = modular_exponentiation(a, d, n);
-    if (x == BigInt(1) || x == n - BigInt(1)) {
-         return true;
+    if (x == BigInt(1) || x == n - BigInt(1))
+    {
+        return true;
     }
-   BigInt s_minus_1 = s - BigInt(1);
-   for (BigInt r = BigInt(1); r <= s_minus_1; r = r + BigInt(1)) {
+    BigInt s_minus_1 = s - BigInt(1);
+    for (BigInt r = BigInt(1); r <= s_minus_1; r = r + BigInt(1))
+    {
         x = (x * x) % n;
-        if (x == n - BigInt(1)) return true;
-        if (x == BigInt(1)) return false;
+        if (x == n - BigInt(1))
+            return true;
+        if (x == BigInt(1))
+            return false;
     }
     return false;
 }
-bool isPrime(const BigInt& n) {
-    if (n < BigInt(2)) return false;
-    if (n == BigInt(2) || n == BigInt(3)) return true;
-    if (n.is_even() || n % BigInt(3) == BigInt(0)) return false;
+bool isPrime(const BigInt &n)
+{
+    if (n < BigInt(2))
+        return false;
+    if (n == BigInt(2) || n == BigInt(3))
+        return true;
+    if (is_even(n) || n % BigInt(3) == BigInt(0))
+        return false;
     BigInt primes[] = {
-        BigInt(2), BigInt(3), BigInt(5)
-    };
-    
-    for (const BigInt& a : primes) {
-        if (a >= n) continue;  
-        if (!millerRabinTest(n, a)) {
+        BigInt(2), BigInt(3), BigInt(5)};
+
+    for (const BigInt &a : primes)
+    {
+        if (a >= n)
+            continue;
+        if (!millerRabinTest(n, a))
+        {
             return false;
         }
     }
     return true;
 }
-BigInt get_min_value_with_bit_size(int bit_size) {
+BigInt get_min_value_with_bit_size(int bit_size)
+{
     BigInt result(0);
-    if (bit_size <= 0) return result;
-    
-    int word_index = (bit_size - 1) / 32;
+    if (bit_size <= 0)
+        return result;
+
+    size_t word_index = size_t((bit_size - 1) / 32);
     int bit_index = (bit_size - 1) % 32;
-    
-    if (word_index < result.data.size()) {
+
+    if (word_index < result.data.size())
+    {
         result.data[word_index] = 1U << bit_index;
     }
     return result;
@@ -79,11 +102,14 @@ BigInt generate_safe_prime(int bit_size)
     // 1. Cài đặt logic để sinh một số nguyên tố an toàn
     // 2. Viết hàm kiểm tra nguyên tố (ví dụ: Miller-Rabin)
     BigInt p = get_min_value_with_bit_size(bit_size);
-    if (p.is_even()) p = p + BigInt(1);
-    while(true) {
-        if(isPrime(p)){
-             BigInt q = (p - BigInt(1))/ BigInt(2);
-             if(isPrime(q)) 
+    if (is_even(p))
+        p = p + BigInt(1);
+    while (true)
+    {
+        if (isPrime(p))
+        {
+            BigInt q = (p - BigInt(1)) / BigInt(2);
+            if (isPrime(q))
                 break;
         }
         p = p + BigInt(2);
@@ -98,19 +124,20 @@ BigInt generate_private_key(const BigInt &p)
     random_device rd;
     mt19937_64 gen(rd());
     uniform_int_distribution<uint64_t> dis;
-    
+
     BigInt private_key(0);
-    
+
     // Sinh số ngẫu nhiên cho mỗi phần tử 32-bit trong vector data
-    for (size_t i = 0; i < private_key.data.size(); ++i) {
+    for (size_t i = 0; i < private_key.data.size(); ++i)
+    {
         private_key.data[i] = dis(gen);
     }
-    
+
     // Đảm bảo private_key nằm trong khoảng [2, p-2]
     BigInt p_minus_2 = p - BigInt(2);
     private_key = private_key % p_minus_2;
     private_key = private_key + BigInt(2);
-    
+
     return private_key;
 }
 
