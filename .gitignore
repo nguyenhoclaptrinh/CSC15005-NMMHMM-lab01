@@ -1,0 +1,4 @@
+# .gitignore for CSC15005-NMMHMM-lab01
+
+.vscode/
+*.exe
