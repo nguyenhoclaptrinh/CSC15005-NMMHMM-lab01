@@ -73,11 +73,11 @@ int main()
 
     // 8) multiplication carry across multiple words
     BigInt max32b(string("4294967295")); // 2^32 -1
-    BigInt sq = max32b * max32b; // (2^32-1)^2 = 18446744065119617025
+    BigInt sq = max32b * max32b;         // (2^32-1)^2 = 18446744065119617025
     expect_eq(sq, string("18446744065119617025"), "(2^32-1)^2 carry propagation");
 
     BigInt two32b(string("4294967296")); // 2^32
-    BigInt sq2 = two32b * two32b; // 2^64 = 18446744073709551616
+    BigInt sq2 = two32b * two32b;        // 2^64 = 18446744073709551616
     expect_eq(sq2, string("18446744073709551616"), "(2^32)^2 = 2^64");
 
     // 9) parsing with non-digit characters (constructor ignores non-digits)

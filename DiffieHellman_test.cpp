@@ -12,12 +12,17 @@ BigInt generate_safe_prime(int bit_size);
 
 using namespace std;
 
+static inline bool is_even(const BigInt &n)
+{
+    return (n.data.empty() ? true : ((n.data[0] & 1u) == 0));
+}
+
 static void expect_eq(const BigInt &v, const string &dec, const char *msg)
 {
-    string got = v.to_decimal();
-    if (got != dec)
+    BigInt expected(dec);
+    if (!(v == expected))
     {
-        cerr << "FAIL: " << msg << " -- got: '" << got << "', expected: '" << dec << "'\n";
+        cerr << "FAIL: " << msg << " -- not equal to expected decimal: '" << dec << "'\n";
         exit(1);
     }
     else
@@ -100,8 +105,8 @@ int main()
     int bit_size = 16; // small for tests
     BigInt::BIT_SIZE = bit_size;
     BigInt p = generate_safe_prime(bit_size);
-    cout << "Generated p (bit_size=" << bit_size << "): " << p.to_decimal() << "\n";
-    expect_true(!p.is_even(), "safe prime p should be odd");
+    cout << "Generated p (bit_size=" << bit_size << "): " << p << "\n";
+    expect_true(!is_even(p), "safe prime p should be odd");
     expect_true(isPrime(p), "generated p should be prime");
     BigInt q = (p - BigInt(1)) / BigInt(2);
     expect_true(isPrime(q), "(p-1)/2 should be prime (q)");
@@ -117,7 +122,15 @@ int main()
     BigInt B = modular_exponentiation(g5, b, p23);
     BigInt sA = modular_exponentiation(B, a, p23);
     BigInt sB = modular_exponentiation(A, b, p23);
-    expect_eq(sA, sB.to_decimal(), "DH shared secret equal (23,5,a=6,b=15)");
+    if (!(sA == sB))
+    {
+        cerr << "FAIL: DH shared secret mismatch" << "\n";
+        exit(1);
+    }
+    else
+    {
+        cout << "ok: DH shared secret equal (23,5,a=6,b=15)" << "\n";
+    }
 
     cout << "All Diffie-Hellman tests passed.\n";
     return 0;
