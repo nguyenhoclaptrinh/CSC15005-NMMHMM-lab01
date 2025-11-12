@@ -11,8 +11,8 @@ using namespace std;
 class BigInt
 {
 public:
-    // Số bit tối đa (thiết lập trước khi tạo nhiều BigInt) - phải chia hết cho 32
-    static int BIT_SIZE;
+    // BigInt cơ chế dynamic-size: vector chứa các word 32-bit ít quan trọng nhất ở index 0.
+    // (Trước đây có BIT_SIZE giới hạn; giờ bỏ giới hạn để cho phép mở rộng động.)
     vector<uint32_t> data; // little-endian: data[0] là 32 bit thấp nhất
 
     // Constructors
@@ -40,15 +40,14 @@ public:
     BigInt &normalize();
     std::string to_decimal() const;
 
+    // Quick checks and small shifts
+    // (use existing `normalize()`/`== BigInt(0)` and `shr_bits(1)`)
+
     // Bit utilities (member versions so they can be reused elsewhere)
     // shift-left by given number of bits, returning a new BigInt
     BigInt shl_bits(int bits) const;
     // shift-right by given number of bits, returning a new BigInt
     BigInt shr_bits(int bits) const;
-    // index (0-based) of most-significant set bit, or -1 if zero
-    int msb_index() const;
-    // set a bit (mutates this); ignored if bit >= BIT_SIZE
-    void set_bit(int bit);
     // Compute quotient and remainder: *this / divisor = quotient, remainder
     void divmod(const BigInt &divisor, BigInt &quotient, BigInt &remainder) const;
 

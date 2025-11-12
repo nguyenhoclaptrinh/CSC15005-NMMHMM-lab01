@@ -7,64 +7,32 @@
 
 using namespace std;
 
-/*
- BigInt - chú thích tóm tắt (Tiếng Việt)
-
- Nguyên lý lưu trữ (representation):
- - Dùng vector<uint32_t> `data` lưu các từ 32-bit theo thứ tự little-endian.
-     data[0] là 32 bit thấp nhất (least-significant word), data[1] là tiếp theo, v.v.
- - Hằng số BASE = 2^32; MASK = BASE - 1 dùng để mask 32-bit thấp.
- - `BigInt::BIT_SIZE` (static) xác định kích thước bit tối đa cho các BigInt trong chương trình.
-     Hàm `word_count()` trả số words tương ứng (ceil(BIT_SIZE/32)).
-
- Thiết kế hành vi:
- - BigInt trong repo hoạt động theo chế độ "dynamic nhưng bị giới hạn":
-         + Các BigInt có thể co lại (normalize() loại bỏ các word cao bằng 0),
-         + Nhưng không được mở rộng vượt quá `BIT_SIZE` (các hàm gọi `enforce_max_bits` để cắt/mask kết quả).
- - Các phép toán chính (+, -, *, /, %) được triển khai bằng các thuật toán cổ điển
-     (schoolbook multiplication, shift-subtract division) để rõ mã và dễ kiểm thử.
-
- Mục đích file:
- - Cung cấp các toán tử toán học cơ bản cho BigInt không dấu, các hàm trợ giúp
-     (msb_index, shl_bits, shr1, set_bit) và các I/O cơ bản.
-
- Lưu ý quan trọng:
- - Hàm operator- giả sử *this >= other (không xử lý số âm).
- - Khi cần arithmetic modulo 2^BIT_SIZE (ví dụ trong một số ứng dụng crypto),
-     hiện tại BigInt sẽ tự động cắt phần cao; nếu muốn phát hiện overflow thay
-     vì cắt thì cần thay đổi enforce_max_bits để throw hoặc báo lỗi.
-
-*/
-
-int BigInt::BIT_SIZE = 512; // mặc định, có thể thay đổi trước khi tạo số
-
-// ===== Helper =====
-static inline size_t word_count() { return (BigInt::BIT_SIZE + 31) / 32; }
 static const uint64_t BASE = (1ULL << 32);
 static const uint64_t MASK = BASE - 1;
 
 // ===== Constructors =====
 BigInt::BigInt()
 {
-    data.assign(word_count(), 0);
+    data.clear();
+    data.push_back(0u);
 }
 
 BigInt::BigInt(uint32_t val)
 {
-    data.assign(word_count(), 0);
-    if (!data.empty())
-        data[0] = val;
+    data.clear();
+    data.push_back(val);
 }
 
 BigInt::BigInt(const std::string &decimal)
 {
-    data.assign(word_count(), 0);
+    data.clear();
+    data.push_back(0u);
     // parse thập phân: this = this*10 + digit
     for (char c : decimal)
     {
         if (c < '0' || c > '9')
             continue;
-        // nhân 10
+        // multiply by 10
         uint64_t carry = 0;
         for (size_t i = 0; i < data.size(); ++i)
         {
@@ -72,18 +40,25 @@ BigInt::BigInt(const std::string &decimal)
             data[i] = uint32_t(cur & MASK);
             carry = cur >> 32;
         }
-        // cộng digit
-        carry = uint64_t(c - '0');
-        for (size_t i = 0; i < data.size(); ++i)
+        while (carry)
         {
-            uint64_t cur = uint64_t(data[i]) + carry;
+            data.push_back(uint32_t(carry & MASK));
+            carry >>= 32;
+        }
+        // add digit
+        uint64_t add = uint64_t(c - '0');
+        size_t i = 0;
+        while (add)
+        {
+            if (i >= data.size())
+                data.push_back(0u);
+            uint64_t cur = uint64_t(data[i]) + add;
             data[i] = uint32_t(cur & MASK);
-            carry = cur >> 32;
-            if (!carry)
-                break;
+            add = cur >> 32;
+            ++i;
         }
     }
-    // normalize() removed — trimming is intentionally omitted per refactor
+    normalize();
 }
 
 // ===== Utility =====
@@ -93,29 +68,6 @@ BigInt &BigInt::normalize()
     while (data.size() > 1 && data.back() == 0)
         data.pop_back();
     return *this;
-}
-
-// Ensure BigInt does not exceed the maximum capacity defined by BigInt::BIT_SIZE.
-// Keeps representation dynamic (may shrink) but truncates any excess high words/bits.
-static void enforce_max_bits(BigInt &x)
-{
-    size_t wc = word_count();
-    if (x.data.size() > wc)
-        x.data.resize(wc);
-    // mask top bits beyond BIT_SIZE
-    int top_bits = BigInt::BIT_SIZE % 32;
-    if (top_bits != 0 && wc > 0)
-    {
-        uint32_t mask = (top_bits == 32) ? MASK : ((1u << top_bits) - 1u);
-        x.data[wc - 1] &= mask;
-        // if the top word cleared becomes zero we allow normalize to shrink representation
-        x.normalize();
-    }
-    else
-    {
-        // also allow trimming of trailing zeros
-        x.normalize();
-    }
 }
 
 // shift-left by an arbitrary number of bits, return new BigInt
@@ -139,7 +91,6 @@ BigInt BigInt::shl_bits(int bits) const
     }
     if (carry)
         r.data.push_back(uint32_t(carry));
-    enforce_max_bits(r);
     return r;
 }
 
@@ -220,7 +171,6 @@ BigInt BigInt::operator+(const BigInt &other) const
     {
         r.data.push_back(uint32_t(carry));
     }
-    enforce_max_bits(r);
     return r;
 }
 
@@ -241,32 +191,30 @@ BigInt BigInt::operator-(const BigInt &other) const
             borrow = 1;
         }
         else
+        {
             borrow = 0;
+        }
         r.data[i] = uint32_t(d & MASK);
     }
-    enforce_max_bits(r);
     return r;
 }
 
 BigInt BigInt::operator*(const BigInt &other) const
 {
-    size_t na = data.size(),
-           nb = other.data.size();
+    size_t na = data.size();
+    size_t nb = other.data.size();
     BigInt r;
-    // ensure capacity
     r.data.assign(na + nb, 0);
     for (size_t i = 0; i < na; ++i)
     {
         uint64_t carry = 0;
         for (size_t j = 0; j < nb; ++j)
         {
-            // accumulate product + existing + carry
             uint64_t cur = uint64_t(data[i]) * uint64_t(other.data[j]);
             uint64_t sum = uint64_t(r.data[i + j]) + cur + carry;
             r.data[i + j] = uint32_t(sum & MASK);
             carry = sum >> 32;
         }
-        // propagate carry into higher words; this may cascade
         size_t k = i + nb;
         while (carry)
         {
@@ -278,6 +226,7 @@ BigInt BigInt::operator*(const BigInt &other) const
             ++k;
         }
     }
+    r.normalize();
     return r;
 }
 
@@ -328,7 +277,6 @@ void BigInt::divmod(const BigInt &divisor, BigInt &quotient, BigInt &remainder) 
         quotient = BigInt(0);
         remainder = u;
         remainder.normalize();
-        enforce_max_bits(remainder);
         return;
     }
 
@@ -347,8 +295,6 @@ void BigInt::divmod(const BigInt &divisor, BigInt &quotient, BigInt &remainder) 
         }
         quotient.normalize();
         remainder = BigInt(uint32_t(rem & MASK));
-        enforce_max_bits(quotient);
-        enforce_max_bits(remainder);
         return;
     }
 
@@ -423,8 +369,6 @@ void BigInt::divmod(const BigInt &divisor, BigInt &quotient, BigInt &remainder) 
     remainder = u.shr_bits(s);
     remainder.normalize();
     quotient.normalize();
-    enforce_max_bits(quotient);
-    enforce_max_bits(remainder);
 }
 
 // ===== Decimal conversion =====
