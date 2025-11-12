@@ -32,13 +32,25 @@ public:
     // Toán tử số học (giả sử không overflow vượt BIT_SIZE, nhân cắt phần cao)
     BigInt operator+(const BigInt &other) const;
     BigInt operator-(const BigInt &other) const; // giả sử *this >= other
-    BigInt operator*(const BigInt &other) const; // schoolbook, cắt kết quả
+    BigInt operator*(const BigInt &other) const; // nhân
     BigInt operator/(const BigInt &other) const; // chia lấy phần nguyên
     BigInt operator%(const BigInt &mod) const;   // phần dư
 
     // Utility
     BigInt &normalize();
     std::string to_decimal() const;
+
+    // Bit utilities (member versions so they can be reused elsewhere)
+    // shift-left by given number of bits, returning a new BigInt
+    BigInt shl_bits(int bits) const;
+    // shift-right by given number of bits, returning a new BigInt
+    BigInt shr_bits(int bits) const;
+    // index (0-based) of most-significant set bit, or -1 if zero
+    int msb_index() const;
+    // set a bit (mutates this); ignored if bit >= BIT_SIZE
+    void set_bit(int bit);
+    // Compute quotient and remainder: *this / divisor = quotient, remainder
+    void divmod(const BigInt &divisor, BigInt &quotient, BigInt &remainder) const;
 
     // I/O
     friend istream &operator>>(istream &in, BigInt &val);

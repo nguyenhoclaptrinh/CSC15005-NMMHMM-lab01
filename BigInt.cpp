@@ -106,7 +106,7 @@ static void enforce_max_bits(BigInt &x)
     int top_bits = BigInt::BIT_SIZE % 32;
     if (top_bits != 0 && wc > 0)
     {
-        uint32_t mask = (top_bits == 32) ? 0xFFFFFFFFu : ((1u << top_bits) - 1u);
+        uint32_t mask = (top_bits == 32) ? MASK : ((1u << top_bits) - 1u);
         x.data[wc - 1] &= mask;
         // if the top word cleared becomes zero we allow normalize to shrink representation
         x.normalize();
@@ -119,10 +119,10 @@ static void enforce_max_bits(BigInt &x)
 }
 
 // shift-left by an arbitrary number of bits, return new BigInt
-static BigInt shl_bits(const BigInt &x, int bits)
+BigInt BigInt::shl_bits(int bits) const
 {
     if (bits == 0)
-        return x;
+        return *this;
     int word_shift = bits / 32;
     int bit_shift = bits % 32;
     BigInt r;
@@ -130,9 +130,9 @@ static BigInt shl_bits(const BigInt &x, int bits)
     // insert word_shift zeros at low end
     r.data.insert(r.data.end(), word_shift, 0u);
     uint64_t carry = 0;
-    for (size_t i = 0; i < x.data.size(); ++i)
+    for (size_t i = 0; i < data.size(); ++i)
     {
-        uint64_t cur = (uint64_t)x.data[i] << bit_shift;
+        uint64_t cur = (uint64_t)data[i] << bit_shift;
         uint64_t sum = cur | carry;
         r.data.push_back(uint32_t(sum & MASK));
         carry = sum >> 32;
@@ -140,21 +140,39 @@ static BigInt shl_bits(const BigInt &x, int bits)
     if (carry)
         r.data.push_back(uint32_t(carry));
     enforce_max_bits(r);
-    enforce_max_bits(r);
     return r;
 }
 
-// shift-right by 1 bit in-place
-static void shr1(BigInt &x)
+// shift-right by arbitrary bits, return BigInt
+BigInt BigInt::shr_bits(int bits) const
 {
-    uint32_t carry = 0;
-    for (int i = int(x.data.size()) - 1; i >= 0; --i)
+    if (bits == 0)
+        return *this;
+    int word_shift = bits / 32;
+    int bit_shift = bits % 32;
+    if ((int)data.size() <= word_shift)
+        return BigInt(0);
+    BigInt r;
+    r.data.clear();
+    // start from word_shift
+    uint64_t carry = 0;
+    for (int i = int(data.size()) - 1; i >= word_shift; --i)
     {
-        uint64_t cur = (uint64_t)carry << 32 | x.data[i];
-        x.data[i] = uint32_t(cur >> 1);
-        carry = uint32_t(cur & 1u);
+        uint64_t cur = data[i];
+        if (bit_shift == 0)
+        {
+            uint32_t val = uint32_t(cur);
+            r.data.insert(r.data.begin(), val);
+        }
+        else
+        {
+            uint64_t low = (cur >> bit_shift) | (carry << (32 - bit_shift));
+            r.data.insert(r.data.begin(), uint32_t(low & MASK));
+            carry = cur & ((1ULL << bit_shift) - 1ULL);
+        }
     }
-    x.normalize();
+    r.normalize();
+    return r;
 }
 
 bool BigInt::operator==(const BigInt &other) const
@@ -263,82 +281,16 @@ BigInt BigInt::operator*(const BigInt &other) const
     return r;
 }
 
-// Bit helpers
-static int msb_index(const BigInt &x)
-{
-    for (int wi = int(x.data.size()) - 1; wi >= 0; --wi)
-    {
-        uint32_t w = x.data[wi];
-        if (w)
-        {
-            for (int b = 31; b >= 0; --b)
-                if ((w >> b) & 1u)
-                    return wi * 32 + b;
-        }
-    }
-    return -1;
-}
-// get_bit and shl1 removed (not used); shl_bits and shr1 are used instead
-static void set_bit(BigInt &x, int bit)
-{
-    if (bit < 0)
-        return;
-    if (bit >= BigInt::BIT_SIZE)
-        return; // ignore bits beyond max capacity
-    size_t wi = size_t(bit / 32);
-    int bi = bit % 32;
-    size_t wc = word_count();
-    if (wi >= wc)
-    {
-        // should not happen because bit < BIT_SIZE implies wi < wc, but guard anyway
-        return;
-    }
-    if (wi >= x.data.size())
-        x.data.resize(wi + 1, 0);
-    x.data[wi] |= (1u << bi);
-    enforce_max_bits(x);
-}
-
 BigInt BigInt::operator/(const BigInt &other) const
 {
-    // Improved division: shift-subtract method using bit shifts of divisor.
-    bool zero = true;
-    for (auto w : other.data)
-        if (w)
-        {
-            zero = false;
-            break;
-        }
-    if (zero)
-        throw runtime_error("divide by zero");
-    if (*this < other)
-        return BigInt(0);
-
-    BigInt dividend = *this;
-    BigInt quotient(0);
-
-    int msd_dividend = msb_index(dividend);
-    int msd_divisor = msb_index(other);
-    int shift = msd_dividend - msd_divisor;
-
-    BigInt dshift = shl_bits(other, shift);
-    for (int b = shift; b >= 0; --b)
-    {
-        if (!(dividend < dshift))
-        {
-            dividend = dividend - dshift;
-            set_bit(quotient, b);
-        }
-        // shift dshift right by 1 for next bit
-        shr1(dshift);
-    }
-    quotient.normalize();
-    enforce_max_bits(quotient);
-    return quotient;
+    BigInt q, r;
+    divmod(other, q, r);
+    return q;
 }
 
 BigInt BigInt::operator%(const BigInt &mod) const
 {
+    // Use divmod via Knuth D: compute quotient and remainder, return remainder
     bool zero = true;
     for (auto w : mod.data)
         if (w)
@@ -351,22 +303,128 @@ BigInt BigInt::operator%(const BigInt &mod) const
     if (*this < mod)
         return *this;
 
-    BigInt dividend = *this;
-    int msd_dividend = msb_index(dividend);
-    int msd_divisor = msb_index(mod);
-    int shift = msd_dividend - msd_divisor;
-    BigInt dshift = shl_bits(mod, shift);
-    for (int b = shift; b >= 0; --b)
+    BigInt q, r;
+    divmod(mod, q, r);
+    return r;
+}
+
+// Compute quotient and remainder: *this / divisor = quotient, remainder
+void BigInt::divmod(const BigInt &divisor, BigInt &quotient, BigInt &remainder) const
+{
+    // Prepare normalized copies so we can detect actual word sizes and avoid
+    // calling __builtin_clz on zero.
+    BigInt u = *this;
+    BigInt v = divisor;
+    u.normalize();
+    v.normalize();
+
+    // handle zero divisor
+    if (v.data.size() == 0 || (v.data.size() == 1 && v.data[0] == 0))
+        throw runtime_error("divide by zero");
+
+    // if dividend < divisor
+    if (u < v)
     {
-        if (!(dividend < dshift))
-        {
-            dividend = dividend - dshift;
-        }
-        shr1(dshift);
+        quotient = BigInt(0);
+        remainder = u;
+        remainder.normalize();
+        enforce_max_bits(remainder);
+        return;
     }
-    dividend.normalize();
-    enforce_max_bits(dividend);
-    return dividend;
+
+    // Shortcut: single-word divisor
+    if (v.data.size() == 1)
+    {
+        uint64_t d = v.data[0];
+        quotient.data.assign(u.data.size(), 0);
+        uint64_t rem = 0;
+        for (int i = int(u.data.size()) - 1; i >= 0; --i)
+        {
+            uint64_t cur = (rem << 32) | u.data[i];
+            uint64_t qq = cur / d;
+            rem = cur % d;
+            quotient.data[i] = uint32_t(qq & MASK);
+        }
+        quotient.normalize();
+        remainder = BigInt(uint32_t(rem & MASK));
+        enforce_max_bits(quotient);
+        enforce_max_bits(remainder);
+        return;
+    }
+
+    // General Knuth D algorithm
+    // u and v are normalized copies with no leading zero words
+    // normalize so highest bit of v is set
+    uint32_t v_high = v.data.back();
+    int s = __builtin_clz(v_high);
+    if (s > 0)
+    {
+        u = u.shl_bits(s);
+        v = v.shl_bits(s);
+    }
+
+    size_t m = v.data.size();
+    // ensure u has one extra word
+    u.data.push_back(0);
+    size_t n = u.data.size();
+    size_t k = n - m; // number of quotient words
+    quotient.data.assign(k, 0);
+
+    for (int j = int(k) - 1; j >= 0; --j)
+    {
+        // estimate qhat using top two words of u
+        uint64_t numerator = ((uint64_t)u.data[j + m] << 32) | (uint64_t)u.data[j + m - 1];
+        uint64_t v_m1 = v.data[m - 1];
+        uint64_t qhat = numerator / v_m1;
+        uint64_t rhat = numerator % v_m1;
+
+        // correction loop
+        while (qhat >= (1ULL << 32) || (uint64_t)qhat * (uint64_t)v.data[m - 2] > (((uint64_t)rhat << 32) | (uint64_t)u.data[j + m - 2]))
+        {
+            qhat -= 1;
+            rhat += v_m1;
+            if (rhat >= (1ULL << 32))
+                break;
+        }
+
+        // multiply v by qhat and subtract from u at position j
+        uint64_t borrow = 0;
+        for (size_t i = 0; i < m; ++i)
+        {
+            uint64_t p = (uint64_t)qhat * (uint64_t)v.data[i];
+            uint64_t p_lo = p & MASK;
+            uint64_t p_hi = p >> 32;
+            uint64_t cur = (uint64_t)u.data[j + i];
+            uint64_t sub = cur - p_lo - borrow;
+            u.data[j + i] = uint32_t(sub & MASK);
+            borrow = p_hi + ((cur < p_lo + borrow) ? 1ULL : 0ULL);
+        }
+        uint64_t cur = (uint64_t)u.data[j + m];
+        uint64_t sub = cur - borrow;
+        u.data[j + m] = uint32_t(sub & MASK);
+
+        if (cur < borrow)
+        {
+            // qhat was too big; add back v
+            qhat -= 1;
+            uint64_t carry2 = 0;
+            for (size_t i = 0; i < m; ++i)
+            {
+                uint64_t sum = (uint64_t)u.data[j + i] + (uint64_t)v.data[i] + carry2;
+                u.data[j + i] = uint32_t(sum & MASK);
+                carry2 = sum >> 32;
+            }
+            u.data[j + m] = uint32_t(((uint64_t)u.data[j + m] + carry2) & MASK);
+        }
+        quotient.data[j] = uint32_t(qhat & MASK);
+    }
+
+    // remainder: shift right s bits
+    remainder = u.shr_bits(s);
+    remainder.normalize();
+    quotient.normalize();
+    enforce_max_bits(quotient);
+    enforce_max_bits(remainder);
 }
 
 // ===== Decimal conversion =====
