@@ -17,14 +17,15 @@ BigInt modular_exponentiation(const BigInt &base, const BigInt &exponent, const 
     BigInt base_mod = base % mod;
 
     BigInt exp = exponent;
+    // Iterate bits of exponent from least-significant to most; use shr_bits(1)
     while (!(exp == BigInt(0)))
     {
-        if (!is_even(exp))
+        if ((exp.data.size() > 0) && ((exp.data[0] & 1u) != 0))
         {
             result = (result * base_mod) % mod;
         }
         base_mod = (base_mod * base_mod) % mod;
-        exp = exp / BigInt(2);
+        exp = exp.shr_bits(1);
     }
     return result;
 }
@@ -34,9 +35,10 @@ bool millerRabinTest(const BigInt &n, const BigInt &a)
     if (a >= BigInt(n - BigInt(1))) return true;
     BigInt d = n - BigInt(1);
     BigInt s(0);
-    while (is_even(d))
+    // factor n-1 = d * 2^s by shifting out low bits
+    while ((d.data.size() > 0) && ((d.data[0] & 1u) == 0))
     {
-        d = d / BigInt(2);
+        d = d.shr_bits(1);
         s = s + BigInt(1);
     }
     BigInt x = modular_exponentiation(a, d, n);
@@ -92,9 +94,6 @@ BigInt get_min_value_with_bit_size(int bit_size)
 {
     if (bit_size <= 0)
         return BigInt(0);
-    // clamp requested bit_size to allowed maximum
-    if (bit_size > BigInt::BIT_SIZE)
-        bit_size = BigInt::BIT_SIZE;
     size_t words = (bit_size + 31) / 32;
     BigInt result(0);
     result.data.assign(words, 0u);
@@ -157,8 +156,13 @@ int main()
 {
     // 1. Sinh số nguyên tố lớn p và phần tử sinh g
     int bit_size = 32; // Kích thước bit ví dụ, có thể điều chỉnh
+    printf("Enter bit size for prime p: ");
+    cin >> bit_size;
     BigInt p = generate_safe_prime(bit_size); // Sinh một số nguyên tố
     BigInt g = BigInt(2);                     // Phần tử sinh, sinh viên cần tìm hiểu và chọn giá trị khác
+
+    printf("Generated safe prime p: %s\n", p.to_decimal().c_str());
+    printf("Using generator g: %s\n", g.to_decimal().c_str());
 
     // 2. Sinh khóa riêng của Alice và Bob
     BigInt a = generate_private_key(p); // Khóa riêng của Alice
