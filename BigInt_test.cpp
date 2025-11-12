@@ -4,6 +4,8 @@
 #include <cassert>
 #include <string>
 #include "BigInt.h"
+#include <random>
+#include <cstdlib>
 
 using namespace std;
 
@@ -90,6 +92,44 @@ int main()
     expect_eq(x % x, string("0"), "x % x == 0");
     expect_eq(x / BigInt(1), string("123456789"), "x / 1 == x");
 
+    // 11) (removed) bit helpers: set_bit and msb_index - not present in this build
+
+    // 12) shift helpers
+    BigInt sh(string("123456789"));
+    BigInt shl = sh.shl_bits(10); // multiply by 2^10 = 1024
+    BigInt expectMul = sh * BigInt(1024);
+    if (!(shl == expectMul)) { cerr << "FAIL: shl_bits(10) != multiply by 1024\n"; std::_Exit(1); }
+    BigInt shr = shl.shr_bits(10);
+    if (!(shr == sh)) { cerr << "FAIL: shr_bits(10) did not restore original\n"; std::_Exit(1); }
+
+    // 13) divmod exception on divide by zero
+    try {
+        BigInt q,r;
+        bigA.divmod(BigInt(0), q, r);
+        cerr << "FAIL: expected divide by zero to throw\n";
+        std::_Exit(1);
+    } catch (const std::runtime_error &e) {
+        // expected
+    }
+
+    // 14) randomized small-precision division checks (compare with 64-bit reference)
+    std::mt19937_64 rng(123456);
+    for (int i = 0; i < 200; ++i)
+    {
+        unsigned long long A_r = (rng() % 1000000000000ULL) + 1; // up to 1e12
+        unsigned long long B_r = (rng() % 1000000ULL) + 1;      // up to 1e6
+        unsigned long long qq = A_r / B_r;
+        unsigned long long rr = A_r % B_r;
+        BigInt BA(std::to_string(A_r));
+        BigInt BB(std::to_string(B_r));
+        BigInt BQ = BA / BB;
+        BigInt BR = BA % BB;
+        expect_eq(BQ, std::to_string(qq), "random div quotient");
+        expect_eq(BR, std::to_string(rr), "random div remainder");
+    }
+
+    // 15) (skipped) set_bit >= BIT_SIZE ignored - set_bit/membership not available
+
     cout << "All tests passed.\n";
-    return 0;
+    std::_Exit(0);
 }

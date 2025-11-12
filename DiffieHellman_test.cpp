@@ -103,7 +103,6 @@ int main()
 
     // 4) generate_safe_prime small bit size (fast)
     int bit_size = 16; // small for tests
-    BigInt::BIT_SIZE = bit_size;
     BigInt p = generate_safe_prime(bit_size);
     cout << "Generated p (bit_size=" << bit_size << "): " << p << "\n";
     expect_true(!is_even(p), "safe prime p should be odd");
