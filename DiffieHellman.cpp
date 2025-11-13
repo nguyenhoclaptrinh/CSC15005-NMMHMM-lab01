@@ -109,18 +109,37 @@ BigInt generate_safe_prime(int bit_size)
 {
     // 1. Cài đặt logic để sinh một số nguyên tố an toàn
     // 2. Viết hàm kiểm tra nguyên tố (ví dụ: Miller-Rabin)
-    BigInt p = get_min_value_with_bit_size(bit_size);
-    if (is_even(p))
-        p = p + BigInt(1);
-    while (true)
-    {
-        if (isPrime(p))
-        {
-            BigInt q = (p - BigInt(1)) / BigInt(2);
-            if (isPrime(q))
+    BigInt q = get_min_value_with_bit_size(bit_size - 1);
+    BigInt p;
+    
+    if (is_even(q))
+        q = q + BigInt(1);
+    int tries = 0;
+    while(true) {
+        if(tries > 10000) {
+            cout << "Please input another bit_size " ;
+            p = BigInt(0);
+            break;
+        }
+        if(q % BigInt(3) == BigInt(1)) {
+            q = q + BigInt(4);
+            continue;
+        }
+        if(q % BigInt(5) == BigInt(2)) {
+            q = q + BigInt(2);
+            continue;
+        }
+        if(bit_size > 3 && q % BigInt(7) == BigInt(3)) {
+            q = q + BigInt(2);
+            continue;
+        }
+        if (isPrime(q)) {
+            p = q * BigInt(2) + BigInt(1);
+            if (isPrime(p))
                 break;
         }
-        p = p + BigInt(2);
+        q = q + BigInt(2);
+        tries++;
     }
     return p;
 }
