@@ -116,20 +116,20 @@ BigInt generate_safe_prime(int bit_size)
         q = q + BigInt(1);
     int tries = 0;
     while(true) {
-        if(tries > 10000) {
+        if(tries > 40000) {
             cout << "Please input another bit_size " ;
             p = BigInt(0);
             break;
         }
-        if(q % BigInt(3) == BigInt(1)) {
+        if(q % BigInt(3) == BigInt(1)) {    // q = 1 (mod 3) -> p = 2q + 1 = 0 (mod 3) not prime
             q = q + BigInt(4);
             continue;
         }
-        if(q % BigInt(5) == BigInt(2)) {
+        if(q % BigInt(5) == BigInt(2)) {   // q = 2 (mod 5) -> p = 2q + 1 = 0 (mod 5) not prime
             q = q + BigInt(2);
             continue;
         }
-        if(bit_size > 3 && q % BigInt(7) == BigInt(3)) {
+        if(bit_size > 3 && q % BigInt(7) == BigInt(3)) {  // q = 3 (mod 7) -> p = 2q + 1 = 0 (mod 7) not prime
             q = q + BigInt(2);
             continue;
         }
