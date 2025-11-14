@@ -116,14 +116,17 @@ BigInt generate_safe_prime(int bit_size)
         q = q + BigInt(1);
     int tries = 0;
     while(true) {
-        if(tries > 40000) {
-            cout << "Please input another bit_size " ;
-            p = BigInt(0);
-            break;
-        }
-        if(q % BigInt(3) == BigInt(1)) {    // q = 1 (mod 3) -> p = 2q + 1 = 0 (mod 3) not prime
-            q = q + BigInt(4);
+        if(tries > 1e9) {
+            cout << "Tìm quá lâu, hãy nhập lại kích thước bit khác: " ;
+            cin >> bit_size;
+            q = get_min_value_with_bit_size(bit_size - 1);
+            if (is_even(q))
+                q = q + BigInt(1);
+            tries = 0;
             continue;
+        }
+        if (tries % 100000 == 0 && tries > 0) {
+            cout << "Đã thử" << tries << " lần \n";
         }
         if(q % BigInt(5) == BigInt(2)) {   // q = 2 (mod 5) -> p = 2q + 1 = 0 (mod 5) not prime
             q = q + BigInt(2);
@@ -136,7 +139,10 @@ BigInt generate_safe_prime(int bit_size)
         if (isPrime(q)) {
             p = q * BigInt(2) + BigInt(1);
             if (isPrime(p))
+            {
+                cout << "Tried " << tries << " times to find safe prime.\n";
                 break;
+            }
         }
         q = q + BigInt(2);
         tries++;
