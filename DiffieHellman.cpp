@@ -116,15 +116,15 @@ BigInt generate_safe_prime(int bit_size)
         q = q + BigInt(1);
     int tries = 0;
     while(true) {
-        if(tries > 1e9) {
-            cout << "Tìm quá lâu, hãy nhập lại kích thước bit khác: " ;
-            cin >> bit_size;
-            q = get_min_value_with_bit_size(bit_size - 1);
-            if (is_even(q))
-                q = q + BigInt(1);
-            tries = 0;
-            continue;
-        }
+        // if(tries > 1e9) {
+        //     cout << "Tìm quá lâu, hãy nhập lại kích thước bit khác: " ;
+        //     cin >> bit_size;
+        //     q = get_min_value_with_bit_size(bit_size - 1);
+        //     if (is_even(q))
+        //         q = q + BigInt(1);
+        //     tries = 0;
+        //     continue;
+        // }
         if (tries % 100000 == 0 && tries > 0) {
             cout << "Đã thử" << tries << " lần \n";
         }
