@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <iomanip>
+#include <cassert>
 
 using namespace std;
 
@@ -67,6 +68,8 @@ BigInt &BigInt::normalize()
     // trim high zero words but keep at least one word
     while (data.size() > 1 && data.back() == 0)
         data.pop_back();
+    if (data.empty())
+        data.push_back(0u);
     return *this;
 }
 
@@ -95,6 +98,7 @@ BigInt BigInt::shl_bits(int bits) const
 }
 
 // shift-right by arbitrary bits, return BigInt
+// Dịch phải k bit; trả về BigInt mới (không sửa this)
 BigInt BigInt::shr_bits(int bits) const
 {
     if (bits == 0)
@@ -105,7 +109,7 @@ BigInt BigInt::shr_bits(int bits) const
         return BigInt(0);
     BigInt r;
     r.data.clear();
-    // start from word_shift
+    // start from MSW down to word_shift, push_back then reverse for O(n)
     uint64_t carry = 0;
     for (int i = int(data.size()) - 1; i >= word_shift; --i)
     {
@@ -113,15 +117,17 @@ BigInt BigInt::shr_bits(int bits) const
         if (bit_shift == 0)
         {
             uint32_t val = uint32_t(cur);
-            r.data.insert(r.data.begin(), val);
+            r.data.push_back(val);
         }
         else
         {
             uint64_t low = (cur >> bit_shift) | (carry << (32 - bit_shift));
-            r.data.insert(r.data.begin(), uint32_t(low & MASK));
+            r.data.push_back(uint32_t(low & MASK));
             carry = cur & ((1ULL << bit_shift) - 1ULL);
         }
     }
+    // dữ liệu đang là MSW..LSW; đảo để thành LSW..MSW
+    reverse(r.data.begin(), r.data.end());
     r.normalize();
     return r;
 }
@@ -177,6 +183,8 @@ BigInt BigInt::operator+(const BigInt &other) const
 BigInt BigInt::operator-(const BigInt &other) const
 {
     // Giả sử *this >= other
+    // Nếu không thỏa, đây là underflow (API hiện chỉ hỗ trợ unsigned)
+    assert(!((*this) < other) && "BigInt::operator- underflow: a < b");
     BigInt r;
     r.data.assign(data.size(), 0);
     int64_t borrow = 0;
@@ -196,6 +204,7 @@ BigInt BigInt::operator-(const BigInt &other) const
         }
         r.data[i] = uint32_t(d & MASK);
     }
+    r.normalize();
     return r;
 }
 
@@ -315,6 +324,8 @@ void BigInt::divmod(const BigInt &divisor, BigInt &quotient, BigInt &remainder) 
     size_t n = u.data.size();
     size_t k = n - m; // number of quotient words
     quotient.data.assign(k, 0);
+    if (quotient.data.empty())
+        quotient.data.push_back(0u);
 
     for (int j = int(k) - 1; j >= 0; --j)
     {
